@@ -37,11 +37,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // Kalau plugin ada Kotlin
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     lint {
         disable 'InvalidPackage'
     }
@@ -52,4 +47,10 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.17.1'
     implementation 'com.google.android.exoplayer:exoplayer-dash:2.17.1'
     implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.17.1'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
