@@ -28,10 +28,10 @@ apply plugin: 'com.android.library'
 
 android {
     namespace "com.lazyarts.vikram.cached_video_player"
-    compileSdkVersion 29
+    compileSdkVersion 34
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 21
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     lintOptions {
