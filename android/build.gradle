@@ -1,53 +1,55 @@
 group 'io.flutter.plugins.videoplayer'
 version '1.0-SNAPSHOT'
-def args = ["-Xlint:deprecation","-Xlint:unchecked","-Werror"]
 
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral() // jcenter sudah deprecated
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        // Sesuaikan dengan versi Gradle terbaru yang kompatibel dengan Flutter
+        classpath 'com.android.tools.build:gradle:8.3.1'
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
-}
-
-project.getTasks().withType(JavaCompile){
-    options.compilerArgs.addAll(args)
 }
 
 apply plugin: 'com.android.library'
 
 android {
     namespace "com.lazyarts.vikram.cached_video_player"
-    compileSdkVersion 34
+    compileSdk 34
 
     defaultConfig {
-        minSdkVersion 21
+        minSdk 21
+        targetSdk 34
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    lintOptions {
-        disable 'InvalidPackage'
-    }
-    android {
-        compileOptions {
-            sourceCompatibility 17
-            targetCompatibility 17
-        }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    dependencies {
-        implementation 'com.google.android.exoplayer:exoplayer-core:2.17.1'
-        implementation 'com.google.android.exoplayer:exoplayer-hls:2.17.1'
-        implementation 'com.google.android.exoplayer:exoplayer-dash:2.17.1'
-        implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.17.1'
+    // Kalau plugin ada Kotlin
+    kotlinOptions {
+        jvmTarget = "17"
     }
+
+    lint {
+        disable 'InvalidPackage'
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.17.1'
+    implementation 'com.google.android.exoplayer:exoplayer-hls:2.17.1'
+    implementation 'com.google.android.exoplayer:exoplayer-dash:2.17.1'
+    implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.17.1'
 }
