@@ -21,11 +21,13 @@
     },
     {
       "name": "pigeon",
-      "version": "3.2.9",
+      "version": "17.3.0",
       "dependencies": [
         "analyzer",
         "args",
+        "code_builder",
         "collection",
+        "dart_style",
         "meta",
         "path",
         "yaml"
@@ -113,26 +115,67 @@
       "dependencies": []
     },
     {
+      "name": "code_builder",
+      "version": "4.10.1",
+      "dependencies": [
+        "built_collection",
+        "built_value",
+        "collection",
+        "matcher",
+        "meta"
+      ]
+    },
+    {
       "name": "args",
       "version": "2.7.0",
       "dependencies": []
     },
     {
-      "name": "analyzer",
-      "version": "4.7.0",
+      "name": "source_span",
+      "version": "1.10.0",
       "dependencies": [
-        "_fe_analyzer_shared",
         "collection",
-        "convert",
-        "crypto",
-        "glob",
-        "meta",
-        "package_config",
         "path",
-        "pub_semver",
-        "source_span",
-        "watcher",
-        "yaml"
+        "term_glyph"
+      ]
+    },
+    {
+      "name": "pub_semver",
+      "version": "2.2.0",
+      "dependencies": [
+        "collection"
+      ]
+    },
+    {
+      "name": "package_config",
+      "version": "2.2.0",
+      "dependencies": [
+        "path"
+      ]
+    },
+    {
+      "name": "glob",
+      "version": "2.1.3",
+      "dependencies": [
+        "async",
+        "collection",
+        "file",
+        "path",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.6",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
+      "name": "convert",
+      "version": "3.1.2",
+      "dependencies": [
+        "typed_data"
       ]
     },
     {
@@ -205,6 +248,48 @@
       ]
     },
     {
+      "name": "async",
+      "version": "2.11.0",
+      "dependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
+      "name": "leak_tracker_testing",
+      "version": "3.0.2",
+      "dependencies": [
+        "leak_tracker",
+        "matcher",
+        "meta"
+      ]
+    },
+    {
+      "name": "term_glyph",
+      "version": "1.2.1",
+      "dependencies": []
+    },
+    {
+      "name": "string_scanner",
+      "version": "1.3.0",
+      "dependencies": [
+        "source_span"
+      ]
+    },
+    {
+      "name": "boolean_selector",
+      "version": "2.1.1",
+      "dependencies": [
+        "source_span",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "vm_service",
+      "version": "14.3.0",
+      "dependencies": []
+    },
+    {
       "name": "sky_engine",
       "version": "0.0.0",
       "dependencies": []
@@ -236,115 +321,19 @@
       ]
     },
     {
-      "name": "string_scanner",
-      "version": "1.3.0",
+      "name": "built_value",
+      "version": "8.12.0",
       "dependencies": [
-        "source_span"
-      ]
-    },
-    {
-      "name": "source_span",
-      "version": "1.10.0",
-      "dependencies": [
+        "built_collection",
         "collection",
-        "path",
-        "term_glyph"
-      ]
-    },
-    {
-      "name": "watcher",
-      "version": "1.1.4",
-      "dependencies": [
-        "async",
-        "path"
-      ]
-    },
-    {
-      "name": "pub_semver",
-      "version": "2.2.0",
-      "dependencies": [
-        "collection"
-      ]
-    },
-    {
-      "name": "package_config",
-      "version": "2.2.0",
-      "dependencies": [
-        "path"
-      ]
-    },
-    {
-      "name": "glob",
-      "version": "2.1.3",
-      "dependencies": [
-        "async",
-        "collection",
-        "file",
-        "path",
-        "string_scanner"
-      ]
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.6",
-      "dependencies": [
-        "typed_data"
-      ]
-    },
-    {
-      "name": "convert",
-      "version": "3.1.2",
-      "dependencies": [
-        "typed_data"
-      ]
-    },
-    {
-      "name": "_fe_analyzer_shared",
-      "version": "47.0.0",
-      "dependencies": [
+        "fixnum",
         "meta"
       ]
     },
     {
-      "name": "async",
-      "version": "2.11.0",
-      "dependencies": [
-        "collection",
-        "meta"
-      ]
-    },
-    {
-      "name": "leak_tracker_testing",
-      "version": "3.0.2",
-      "dependencies": [
-        "leak_tracker",
-        "matcher",
-        "meta"
-      ]
-    },
-    {
-      "name": "leak_tracker",
-      "version": "11.0.2",
-      "dependencies": [
-        "clock",
-        "collection",
-        "meta",
-        "path",
-        "vm_service"
-      ]
-    },
-    {
-      "name": "term_glyph",
-      "version": "1.2.1",
+      "name": "built_collection",
+      "version": "5.1.1",
       "dependencies": []
-    },
-    {
-      "name": "boolean_selector",
-      "version": "2.1.1",
-      "dependencies": [
-        "source_span",
-        "string_scanner"
-      ]
     },
     {
       "name": "file",
@@ -362,9 +351,65 @@
       ]
     },
     {
-      "name": "vm_service",
-      "version": "14.3.0",
+      "name": "fixnum",
+      "version": "1.1.1",
       "dependencies": []
+    },
+    {
+      "name": "leak_tracker",
+      "version": "11.0.2",
+      "dependencies": [
+        "clock",
+        "collection",
+        "meta",
+        "path",
+        "vm_service"
+      ]
+    },
+    {
+      "name": "dart_style",
+      "version": "2.3.6",
+      "dependencies": [
+        "analyzer",
+        "args",
+        "collection",
+        "path",
+        "pub_semver",
+        "source_span"
+      ]
+    },
+    {
+      "name": "analyzer",
+      "version": "6.4.1",
+      "dependencies": [
+        "_fe_analyzer_shared",
+        "collection",
+        "convert",
+        "crypto",
+        "glob",
+        "meta",
+        "package_config",
+        "path",
+        "pub_semver",
+        "source_span",
+        "watcher",
+        "yaml"
+      ]
+    },
+    {
+      "name": "_fe_analyzer_shared",
+      "version": "67.0.0",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "watcher",
+      "version": "1.1.4",
+      "dependencies": [
+        "async",
+        "path"
+      ]
     }
   ],
   "configVersion": 1

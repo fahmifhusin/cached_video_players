@@ -487,8 +487,20 @@ public class Messages {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
             try {
-              ArrayList<Object> args = (ArrayList<Object>)message;
-              CreateMessage msgArg = (CreateMessage)args.get(0);
+//              ArrayList<Object> args = (ArrayList<Object>)message;
+              @SuppressWarnings("unchecked")
+              Map<String, Object> map = (Map<String, Object>) message;
+              // Buat CreateMessage manual dari HashMap
+              CreateMessage msgArg = new CreateMessage();
+              msgArg.setAsset((String) map.get("asset"));
+              msgArg.setUri((String) map.get("uri"));
+              msgArg.setPackageName((String) map.get("packageName"));
+              msgArg.setFormatHint((String) map.get("formatHint"));
+
+              @SuppressWarnings("unchecked")
+              Map<String, String> headers = (Map<String, String>) map.get("httpHeaders");
+              msgArg.setHttpHeaders(headers);
+//              CreateMessage msgArg = (CreateMessage)args.get(0);
               if (msgArg == null) {
                 throw new NullPointerException("msgArg unexpectedly null.");
               }
