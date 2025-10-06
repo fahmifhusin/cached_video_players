@@ -1,171 +1,249 @@
+// Copyright 2013 The Flutter Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package com.lazyarts.vikram.cached_video_player;
 
-import androidx.annotation.NonNull;
+import android.content.Context;
+import android.os.Build;
+import android.util.LongSparseArray;
+import io.flutter.FlutterInjector;
+import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
-import io.flutter.plugin.common.MethodCall;
-import io.flutter.plugin.common.MethodChannel;
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
-import io.flutter.plugin.common.MethodChannel.Result;
-import java.util.HashMap;
+import io.flutter.plugin.common.BinaryMessenger;
+import io.flutter.plugin.common.EventChannel;
+import com.lazyarts.vikram.cached_video_player.Messages.CreateMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.LoopingMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.MixWithOthersMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.PlaybackSpeedMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.PositionMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.TextureMessage;
+import com.lazyarts.vikram.cached_video_player.Messages.VideoPlayerApi;
+import com.lazyarts.vikram.cached_video_player.Messages.VolumeMessage;
+import io.flutter.view.TextureRegistry;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import javax.net.ssl.HttpsURLConnection;
 
-/** CachedVideoPlayerPlugin */
-public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler {
-  private MethodChannel channel;
-  private FlutterPluginBinding pluginBinding;
-  private final Map<String, CachedVideoPlayer> players = new HashMap<>();
+/** Android platform implementation of the VideoPlayerPlugin. */
+public class CachedVideoPlayerPlugin implements FlutterPlugin, VideoPlayerApi {
+  private static final String TAG = "VideoPlayerPlugin";
+  private final LongSparseArray<CachedVideoPlayer> videoPlayers = new LongSparseArray<>();
+  private FlutterState flutterState;
+  private VideoPlayerOptions options = new VideoPlayerOptions();
 
-  @Override
-  public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
-    pluginBinding = flutterPluginBinding;
+  /** Register this with the v2 embedding for the plugin to respond to lifecycle callbacks. */
+  public CachedVideoPlayerPlugin() {}
 
-    channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "cached_video_player");
-    channel.setMethodCallHandler(this);
+  @SuppressWarnings("deprecation")
+  private CachedVideoPlayerPlugin(io.flutter.plugin.common.PluginRegistry.Registrar registrar) {
+    this.flutterState =
+        new FlutterState(
+            registrar.context(),
+            registrar.messenger(),
+            registrar::lookupKeyForAsset,
+            registrar::lookupKeyForAsset,
+            registrar.textures());
+    flutterState.startListening(this, registrar.messenger());
+  }
+
+  /** Registers this with the stable v1 embedding. Will not respond to lifecycle events. */
+  @SuppressWarnings("deprecation")
+  public static void registerWith(io.flutter.plugin.common.PluginRegistry.Registrar registrar) {
+    final CachedVideoPlayerPlugin plugin = new CachedVideoPlayerPlugin(registrar);
+    registrar.addViewDestroyListener(
+        view -> {
+          plugin.onDestroy();
+          return false; // We are not interested in assuming ownership of the NativeView.
+        });
   }
 
   @Override
-  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    switch (call.method) {
-      case "init":
-        // Handle init
-        initialize();
-        result.success(null);
-        break;
+  public void onAttachedToEngine(FlutterPluginBinding binding) {
 
-      case "create":
-        // Handle create
-        String dataSource = call.argument("dataSource");
-        String formatHint = call.argument("formatHint");
-        Map<String, String> httpHeaders = call.argument("httpHeaders");
-
-        try {
-          Map<String, Object> response = new HashMap<>();
-          response.put("textureId", create(dataSource, formatHint, httpHeaders));
-          result.success(response);
-        } catch (Exception e) {
-          result.error("CREATE_ERROR", e.getMessage(), null);
-        }
-        break;
-
-      case "dispose":
-        String playerId = call.argument("playerId");
-        dispose(playerId);
-        result.success(null);
-        break;
-
-      case "setLooping":
-        String loopingPlayerId = call.argument("playerId");
-        boolean isLooping = call.argument("isLooping");
-        setLooping(loopingPlayerId, isLooping);
-        result.success(null);
-        break;
-
-      case "setVolume":
-        String volumePlayerId = call.argument("playerId");
-        double volume = call.argument("volume");
-        setVolume(volumePlayerId, (float) volume);
-        result.success(null);
-        break;
-
-      case "play":
-        String playPlayerId = call.argument("playerId");
-        play(playPlayerId);
-        result.success(null);
-        break;
-
-      case "pause":
-        String pausePlayerId = call.argument("playerId");
-        pause(pausePlayerId);
-        result.success(null);
-        break;
-
-      case "seekTo":
-        String seekPlayerId = call.argument("playerId");
-        int position = call.argument("position");
-        seekTo(seekPlayerId, position);
-        result.success(null);
-        break;
-
-      default:
-        result.notImplemented();
+    if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+      try {
+        HttpsURLConnection.setDefaultSSLSocketFactory(new CustomSSLSocketFactory());
+      } catch (KeyManagementException | NoSuchAlgorithmException e) {
+        Log.w(
+            TAG,
+            "Failed to enable TLSv1.1 and TLSv1.2 Protocols for API level 19 and below.\n"
+                + "For more information about Socket Security, please consult the following link:\n"
+                + "https://developer.android.com/reference/javax/net/ssl/SSLSocket",
+            e);
+      }
     }
+
+    final FlutterInjector injector = FlutterInjector.instance();
+    this.flutterState =
+        new FlutterState(
+            binding.getApplicationContext(),
+            binding.getBinaryMessenger(),
+            injector.flutterLoader()::getLookupKeyForAsset,
+            injector.flutterLoader()::getLookupKeyForAsset,
+            binding.getTextureRegistry());
+    flutterState.startListening(this, binding.getBinaryMessenger());
   }
 
-  // Method implementations
+  @Override
+  public void onDetachedFromEngine(FlutterPluginBinding binding) {
+    if (flutterState == null) {
+      Log.wtf(TAG, "Detached from the engine before registering to it.");
+    }
+    flutterState.stopListening(binding.getBinaryMessenger());
+    flutterState = null;
+    initialize();
+  }
+
+  private void disposeAllPlayers() {
+    for (int i = 0; i < videoPlayers.size(); i++) {
+      videoPlayers.valueAt(i).dispose();
+    }
+    videoPlayers.clear();
+  }
+
+  private void onDestroy() {
+    // The whole FlutterView is being destroyed. Here we release resources acquired for all
+    // instances
+    // of VideoPlayer. Once https://github.com/flutter/flutter/issues/19358 is resolved this may
+    // be replaced with just asserting that videoPlayers.isEmpty().
+    // https://github.com/flutter/flutter/issues/20989 tracks this.
+    disposeAllPlayers();
+  }
+
   public void initialize() {
-    try {
-      System.out.println("CachedVideoPlayer initialized");
-    } catch (Exception e) {
-      System.err.println("Error initializing CachedVideoPlayer: " + e.getMessage());
-    }
+    disposeAllPlayers();
   }
 
-  public long create(String dataSource, String formatHint, Map<String, String> httpHeaders) {
-    final CachedVideoPlayer player = new CachedVideoPlayer(
-            pluginBinding.getTextureRegistry(),
-            pluginBinding.getApplicationContext()
-    );
+  public TextureMessage create(CreateMessage arg) {
+    TextureRegistry.SurfaceTextureEntry handle =
+        flutterState.textureRegistry.createSurfaceTexture();
+    EventChannel eventChannel =
+        new EventChannel(
+            flutterState.binaryMessenger, "flutter.io/videoPlayer/videoEvents" + handle.id());
 
-    String playerId = player.initialize(); // Sesuaikan dengan method yang ada di CachedVideoPlayer
-    players.put(playerId, player);
+    CachedVideoPlayer player;
+    if (arg.getAsset() != null) {
+      String assetLookupKey;
+      if (arg.getPackageName() != null) {
+        assetLookupKey =
+            flutterState.keyForAssetAndPackageName.get(arg.getAsset(), arg.getPackageName());
+      } else {
+        assetLookupKey = flutterState.keyForAsset.get(arg.getAsset());
+      }
+      player =
+          new CachedVideoPlayer(
+              flutterState.applicationContext,
+              eventChannel,
+              handle,
+              "asset:///" + assetLookupKey,
+              null,
+              null,
+              options);
+    } else {
+      @SuppressWarnings("unchecked")
+      Map<String, String> httpHeaders = arg.getHttpHeaders();
+      player =
+          new CachedVideoPlayer(
+              flutterState.applicationContext,
+              eventChannel,
+              handle,
+              arg.getUri(),
+              arg.getFormatHint(),
+              httpHeaders,
+              options);
+    }
+    videoPlayers.put(handle.id(), player);
 
-    return (long) player.getTextureId();
+    TextureMessage result = new TextureMessage();
+    result.setTextureId(handle.id());
+    return result;
   }
 
-  public void dispose(String playerId) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.dispose();
-      players.remove(playerId);
-    }
+  public void dispose(TextureMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.dispose();
+    videoPlayers.remove(arg.getTextureId());
   }
 
-  public void setLooping(String playerId, boolean isLooping) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.setLooping(isLooping);
-    }
+  public void setLooping(LoopingMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.setLooping(arg.getIsLooping());
   }
 
-  public void setVolume(String playerId, float volume) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.setVolume(volume);
-    }
+  public void setVolume(VolumeMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.setVolume(arg.getVolume());
   }
 
-  public void play(String playerId) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.play();
-    }
+  public void setPlaybackSpeed(PlaybackSpeedMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.setPlaybackSpeed(arg.getSpeed());
   }
 
-  public void pause(String playerId) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.pause();
-    }
+  public void play(TextureMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.play();
   }
 
-  public void seekTo(String playerId, int position) {
-    CachedVideoPlayer player = players.get(playerId);
-    if (player != null) {
-      player.seekTo(position);
-    }
+  public PositionMessage position(TextureMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    PositionMessage result = new PositionMessage();
+    result.setPosition(player.getPosition());
+    player.sendBufferingUpdate();
+    return result;
+  }
+
+  public void seekTo(PositionMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.seekTo(arg.getPosition().intValue());
+  }
+
+  public void pause(TextureMessage arg) {
+    CachedVideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.pause();
   }
 
   @Override
-  public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-    for (CachedVideoPlayer player : players.values()) {
-      player.dispose();
-    }
-    players.clear();
+  public void setMixWithOthers(MixWithOthersMessage arg) {
+    options.mixWithOthers = arg.getMixWithOthers();
+  }
 
-    if (channel != null) {
-      channel.setMethodCallHandler(null);
-      channel = null;
+  private interface KeyForAssetFn {
+    String get(String asset);
+  }
+
+  private interface KeyForAssetAndPackageName {
+    String get(String asset, String packageName);
+  }
+
+  private static final class FlutterState {
+    private final Context applicationContext;
+    private final BinaryMessenger binaryMessenger;
+    private final KeyForAssetFn keyForAsset;
+    private final KeyForAssetAndPackageName keyForAssetAndPackageName;
+    private final TextureRegistry textureRegistry;
+
+    FlutterState(
+        Context applicationContext,
+        BinaryMessenger messenger,
+        KeyForAssetFn keyForAsset,
+        KeyForAssetAndPackageName keyForAssetAndPackageName,
+        TextureRegistry textureRegistry) {
+      this.applicationContext = applicationContext;
+      this.binaryMessenger = messenger;
+      this.keyForAsset = keyForAsset;
+      this.keyForAssetAndPackageName = keyForAssetAndPackageName;
+      this.textureRegistry = textureRegistry;
     }
-    pluginBinding = null;
+
+    void startListening(CachedVideoPlayerPlugin methodCallHandler, BinaryMessenger messenger) {
+      VideoPlayerApi.setup(messenger, methodCallHandler);
+    }
+
+    void stopListening(BinaryMessenger messenger) {
+      VideoPlayerApi.setup(messenger, null);
+    }
   }
 }
