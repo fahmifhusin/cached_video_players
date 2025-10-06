@@ -487,15 +487,26 @@ public class Messages {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
             try {
-              ArrayList<Object> args = (ArrayList<Object>)message;
-              CreateMessage msgArg = (CreateMessage)args.get(0);
-              if (msgArg == null) {
-                throw new NullPointerException("msgArg unexpectedly null.");
+              // Cek dulu tipe data message
+              if (message instanceof Map) {
+                Map<String, Object> messageMap = (Map<String, Object>) message;
+                // Ambil args dari map, asumsikan key-nya "args" atau sesuai struktur Anda
+                ArrayList<Object> args = (ArrayList<Object>) messageMap.get("args");
+
+                if (args != null && !args.isEmpty()) {
+                  CreateMessage msgArg = (CreateMessage) args.get(0);
+                  if (msgArg == null) {
+                    throw new NullPointerException("msgArg unexpectedly null.");
+                  }
+                  TextureMessage output = api.create(msgArg);
+                  wrapped.put("result", output);
+                } else {
+                  throw new IllegalArgumentException("Args not found or empty in message");
+                }
+              } else {
+                throw new IllegalArgumentException("Expected Map but got: " + message.getClass());
               }
-              TextureMessage output = api.create(msgArg);
-              wrapped.put("result", output);
-            }
-            catch (Error | RuntimeException exception) {
+            } catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
             }
             reply.reply(wrapped);
