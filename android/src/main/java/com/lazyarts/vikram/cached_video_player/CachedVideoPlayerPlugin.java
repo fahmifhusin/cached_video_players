@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /** CachedVideoPlayerPlugin */
-public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler, VideoPlayerApi {
+public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler {
   private MethodChannel channel;
   private FlutterPluginBinding pluginBinding;
   private final Map<String, CachedVideoPlayer> players = new HashMap<>();
@@ -21,60 +21,98 @@ public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler
 
     channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "cached_video_player");
     channel.setMethodCallHandler(this);
-
-    // Setup Pigeon VideoPlayerApi
-    VideoPlayerApi.setup(flutterPluginBinding.getBinaryMessenger(), this);
   }
 
-  // ===== IMPLEMENTASI VIDEO PLAYER API =====
-
   @Override
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    switch (call.method) {
+      case "init":
+        // Handle init
+        initialize();
+        result.success(null);
+        break;
+
+      case "create":
+        // Handle create
+        String dataSource = call.argument("dataSource");
+        String formatHint = call.argument("formatHint");
+        Map<String, String> httpHeaders = call.argument("httpHeaders");
+
+        try {
+          Map<String, Object> response = new HashMap<>();
+          response.put("textureId", create(dataSource, formatHint, httpHeaders));
+          result.success(response);
+        } catch (Exception e) {
+          result.error("CREATE_ERROR", e.getMessage(), null);
+        }
+        break;
+
+      case "dispose":
+        String playerId = call.argument("playerId");
+        dispose(playerId);
+        result.success(null);
+        break;
+
+      case "setLooping":
+        String loopingPlayerId = call.argument("playerId");
+        boolean isLooping = call.argument("isLooping");
+        setLooping(loopingPlayerId, isLooping);
+        result.success(null);
+        break;
+
+      case "setVolume":
+        String volumePlayerId = call.argument("playerId");
+        double volume = call.argument("volume");
+        setVolume(volumePlayerId, (float) volume);
+        result.success(null);
+        break;
+
+      case "play":
+        String playPlayerId = call.argument("playerId");
+        play(playPlayerId);
+        result.success(null);
+        break;
+
+      case "pause":
+        String pausePlayerId = call.argument("playerId");
+        pause(pausePlayerId);
+        result.success(null);
+        break;
+
+      case "seekTo":
+        String seekPlayerId = call.argument("playerId");
+        int position = call.argument("position");
+        seekTo(seekPlayerId, position);
+        result.success(null);
+        break;
+
+      default:
+        result.notImplemented();
+    }
+  }
+
+  // Method implementations
   public void initialize() {
-    // Method initialize yang sebelumnya missing - TAMBAHKAN INI
-    // Ini dipanggil dari Flutter side ketika plugin diinisialisasi
-    // Bisa digunakan untuk setup awal cache manager atau resources lainnya
     try {
-      // Untuk sekarang kita biarkan kosong, atau tambahkan inisialisasi jika diperlukan
       System.out.println("CachedVideoPlayer initialized");
     } catch (Exception e) {
       System.err.println("Error initializing CachedVideoPlayer: " + e.getMessage());
     }
   }
 
-  @Override
-  public void create(@NonNull CreateMessage arg) {
-    // Method create yang sudah ada - JANGAN DIUBAH
-    Map<String, Object> createResult = new HashMap<>();
-    try {
-      String dataSource = arg.getDataSource();
-      String formatHint = arg.getFormatHint();
-      Map<String, String> httpHeaders = arg.getHttpHeaders();
-
-      TextureMessage output = create(dataSource, formatHint, httpHeaders);
-      createResult.put("result", output);
-    } catch (Exception exception) {
-      createResult.put("error", wrapError(exception));
-    }
-  }
-
-  // Helper method untuk create
-  public TextureMessage create(String dataSource, String formatHint, Map<String, String> httpHeaders) {
+  public long create(String dataSource, String formatHint, Map<String, String> httpHeaders) {
     final CachedVideoPlayer player = new CachedVideoPlayer(
             pluginBinding.getTextureRegistry(),
             pluginBinding.getApplicationContext()
     );
 
-    String playerId = player.create(dataSource, formatHint, httpHeaders);
+    String playerId = player.initialize(); // Sesuaikan dengan method yang ada di CachedVideoPlayer
     players.put(playerId, player);
 
-    TextureMessage output = new TextureMessage();
-    output.setTextureId((long) player.getTextureId());
-    return output;
+    return (long) player.getTextureId();
   }
 
-  @Override
-  public void dispose(@NonNull VideoPlayerMessage arg) {
-    String playerId = arg.getPlayerId();
+  public void dispose(String playerId) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
       player.dispose();
@@ -82,80 +120,43 @@ public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler
     }
   }
 
-  @Override
-  public void setLooping(@NonNull LoopingMessage arg) {
-    String playerId = arg.getPlayerId();
-    Boolean isLooping = arg.getIsLooping();
+  public void setLooping(String playerId, boolean isLooping) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
       player.setLooping(isLooping);
     }
   }
 
-  @Override
-  public void setVolume(@NonNull VolumeMessage arg) {
-    String playerId = arg.getPlayerId();
-    Double volume = arg.getVolume();
+  public void setVolume(String playerId, float volume) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
-      player.setVolume(volume.floatValue());
+      player.setVolume(volume);
     }
   }
 
-  @Override
-  public void play(@NonNull VideoPlayerMessage arg) {
-    String playerId = arg.getPlayerId();
+  public void play(String playerId) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
       player.play();
     }
   }
 
-  @Override
-  public void pause(@NonNull VideoPlayerMessage arg) {
-    String playerId = arg.getPlayerId();
+  public void pause(String playerId) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
       player.pause();
     }
   }
 
-  @Override
-  public void seekTo(@NonNull PositionMessage arg) {
-    String playerId = arg.getPlayerId();
-    Long position = arg.getPosition();
+  public void seekTo(String playerId, int position) {
     CachedVideoPlayer player = players.get(playerId);
     if (player != null) {
-      player.seekTo(position.intValue());
-    }
-  }
-
-  @Override
-  public void setMixWithOthers(@NonNull MixWithOthersMessage arg) {
-    // Implementation bisa kosong jika tidak diperlukan
-    Boolean mixWithOthers = arg.getMixWithOthers();
-    // Handle audio mixing settings jika diperlukan
-  }
-
-  // ===== METHOD CHANNEL HANDLER =====
-
-  @Override
-  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    // Handler untuk MethodCall legacy
-    switch (call.method) {
-      case "init":
-        // Handle init method call
-        initialize();
-        result.success(null);
-        break;
-      default:
-        result.notImplemented();
+      player.seekTo(position);
     }
   }
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-    // Cleanup semua players
     for (CachedVideoPlayer player : players.values()) {
       player.dispose();
     }
@@ -166,14 +167,5 @@ public class CachedVideoPlayerPlugin implements FlutterPlugin, MethodCallHandler
       channel = null;
     }
     pluginBinding = null;
-  }
-
-  // ===== HELPER METHODS =====
-
-  private Map<String, Object> wrapError(Exception exception) {
-    Map<String, Object> errorMap = new HashMap<>();
-    errorMap.put("message", exception.toString());
-    errorMap.put("code", exception.getClass().getSimpleName());
-    return errorMap;
   }
 }
